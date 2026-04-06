@@ -52,7 +52,7 @@
     "@typescript-eslint/parser": "^8.7.0",
     "auto-changelog": "^2.4.0",
     "browserslist": "^4.28.1",
-    "esbuild": "^0.27.2",
+    "esbuild": "^0.28.0",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "globby": "^16.1.0",
@@ -64,13 +64,13 @@
     "stylelint-config-standard": "^40.0.0",
     "tap-spec": "^5.0.0",
     "typedoc": "^0.28.1",
-    "typescript": "^5.7.3",
-    "vite": "^7.3.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.5",
     "yargs": "^18.0.0"
   },
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
-    "@substrate-system/web-component": "^0.0.46"
+    "@substrate-system/web-component": "^0.0.49"
   }
 }
