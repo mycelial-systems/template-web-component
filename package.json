@@ -71,6 +71,6 @@
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
   "license": "SEE LICENSE IN LICENSE",
   "dependencies": {
-    "@substrate-system/web-component": "^0.0.49"
+    "@substrate-system/web-component": "^0.0.51"
   }
 }
