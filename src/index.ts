@@ -1,4 +1,4 @@
-import { define } from '@substrate-system/web-component/util'
+import { WebComponent } from '@substrate-system/web-component'
 import Debug from '@substrate-system/debug'
 const debug = Debug('{{component-name}}')
 
@@ -9,67 +9,56 @@ declare global {
     }
 }
 
-export class Example extends HTMLElement {
-    // Define the attributes to observe
-    // need this for `attributeChangedCallback`
-    static observedAttributes = ['example']
-
-    example:string|null
-
-    constructor () {
-        super()
-        const example = this.getAttribute('example')
-        this.example = example
-
-        this.innerHTML = `<div>
-            <p>example</p>
-            <ul>
-                ${Array.from(this.children).filter(Boolean).map(node => {
-                    return `<li>${node.outerHTML}</li>`
-                }).join('')}
-            </ul>
-        </div>`
-    }
+/**
+ * Use the `create` factory rather than `class Example extends
+ * WebComponent` with `static TAG`. The base class declares `TAG` as an
+ * *instance* field defaulting to `''`, and `emit`/`on` namespace from
+ * that instance field while `static event()` reads the static one.
+ * Setting only `static TAG` therefore emits `':hello'` while listeners
+ * built from `Example.event('hello')` expect `'{{component-name}}:hello'`,
+ * and nothing fires. `create` sets both.
+ */
+export class Example extends WebComponent.create('{{component-name}}') {
+    /**
+     * Attributes that reflect to properties. The base class generates
+     * the getters and setters, and derives `observedAttributes` from
+     * these, so there is no `static observedAttributes` to maintain.
+     *
+     * @see docs/adr/ADR-004-attributes-as-state.md
+     */
+    static reflectedStringAttributes = ['example']
 
     /**
-     * Handle 'example' attribute changes
-     * @see {@link https://gomakethings.com/how-to-detect-when-attributes-change-on-a-web-component/#organizing-your-code Go Make Things article}
-     *
-     * @param  {string} oldValue The old attribute value
-     * @param  {string} newValue The new attribute value
+     * Reflected properties are installed at runtime, so `declare` gives
+     * them a type without emitting a field that would shadow the
+     * generated accessor.
      */
-    handleChange_example (oldValue:string, newValue:string) {
-        debug('handling example change', oldValue, newValue)
-
-        if (newValue === null) {
-            // [example] was removed
-        } else {
-            // set [example] attribute
-        }
-    }
+    declare example:string|null
 
     /**
-     * Runs when the value of an attribute is changed
-     *
-     * @param  {string} name     The attribute name
-     * @param  {string} oldValue The old attribute value
-     * @param  {string} newValue The new attribute value
+     * The light DOM children as they were authored, captured before the
+     * first render replaces them.
      */
-    attributeChangedCallback (name:string, oldValue:string, newValue:string) {
-        debug('an attribute changed', name)
-        const handler = this[`handleChange_${name}`];
-        (handler && handler(oldValue, newValue))
-        this.render()
-    }
+    #slotted:string[] = []
 
-    disconnectedCallback () {
-        debug('disconnected')
-    }
+    #observer:MutationObserver|null = null
 
     connectedCallback () {
         debug('connected')
 
-        const observer = new MutationObserver(function (mutations) {
+        // Capture the authored children before `render` overwrites them.
+        // Reading these in the constructor is not reliable: an element
+        // created by the parser has no children yet at that point.
+        if (!this.#slotted.length) {
+            this.#slotted = Array.from(this.children).map(node => {
+                return node.outerHTML
+            })
+        }
+
+        // The base class calls `render` for us.
+        super.connectedCallback()
+
+        this.#observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 if (mutation.addedNodes.length) {
                     debug('Node added: ', mutation.addedNodes)
@@ -77,21 +66,46 @@ export class Example extends HTMLElement {
             })
         })
 
-        observer.observe(this, { childList: true })
+        this.#observer.observe(this, { childList: true })
+    }
 
-        this.render()
+    disconnectedCallback () {
+        debug('disconnected')
+        this.#observer?.disconnect()
+        this.#observer = null
+    }
+
+    /**
+     * Handle 'example' attribute changes.
+     *
+     * `attributeChangedCallback` routes here by name. Update the DOM in
+     * place rather than re-rendering, so the component does not throw
+     * away nodes on every attribute change.
+     *
+     * Note this can run before `connectedCallback`, when the attribute
+     * is present in the parsed markup, so there may be nothing to
+     * query yet.
+     *
+     * @param  {string|null} oldValue The old attribute value
+     * @param  {string|null} newValue The new attribute value
+     */
+    handleChange_example (oldValue:string|null, newValue:string|null) {
+        debug('handling example change', oldValue, newValue)
+
+        const p = this.qs('p')
+        if (!p) return  // not rendered yet
+
+        p.textContent = newValue ?? 'example'
     }
 
     render () {
         this.innerHTML = `<div>
-            <p>example</p>
+            <p>${this.example ?? 'example'}</p>
             <ul>
-                ${Array.from(this.children).filter(Boolean).map(node => {
-                    return `<li>${node.outerHTML}</li>`
-                }).join('')}
+                ${this.#slotted.map(html => `<li>${html}</li>`).join('')}
             </ul>
         </div>`
     }
 }
 
-define('{{component-name}}', Example)
+Example.define()

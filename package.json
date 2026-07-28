@@ -9,14 +9,13 @@
   ],
   "scripts": {
     "lint": "eslint \"./**/*.{ts,js}\"",
-    "test": "esbuild ./test/index.ts | tapout",
+    "test": "esbuild ./test/index.ts --bundle | tapout",
     "build-css": "lightningcss --nesting src/index.css -o dist/index.css",
     "build-css:min": "lightningcss --nesting --minify src/index.css -o dist/index.min.css",
     "build-cjs": "esbuild src/*.ts --format=cjs --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --out-extension:.js=.cjs --sourcemap",
     "build-esm": "esbuild src/*.ts --format=esm --metafile=dist/meta.json --keep-names --tsconfig=tsconfig.build.json --outdir=./dist --sourcemap && tsc --emitDeclarationOnly --project tsconfig.build.json --outDir dist",
     "build-esm:min": "esbuild ./src/*.ts --format=esm --keep-names --bundle --tsconfig=tsconfig.build.json --minify --out-extension:.js=.min.js --outdir=./dist --sourcemap",
     "build-example": "mkdir -p ./public && rm -rf ./public/* && NODE_ENV=development vite --mode staging --base=\"/{{repo-name}}\" build",
-    "build-docs": "typedoc --tsconfig tsconfig.build.json ./src/index.ts",
     "build": "mkdir -p ./dist && rm -rf ./dist/* && npm run build-cjs && npm run build-esm && npm run build-esm:min && npm run build-css && npm run build-css:min",
     "build-cli": "esbuild ./bin/cli.ts > ./bin/cli.js",
     "start": "vite",
@@ -41,6 +40,9 @@
       "import": "./dist/*.js",
       "require": "./dist/*.cjs"
     }
+  },
+  "dependencies": {
+    "@substrate-system/web-component": "^0.0.56"
   },
   "devDependencies": {
     "@inquirer/prompts": "^8.3.0",
@@ -69,8 +71,5 @@
     "yargs": "^18.0.0"
   },
   "author": "nichoth <nichoth@nichoth.com> (https://nichoth.com)",
-  "license": "SEE LICENSE IN LICENSE",
-  "dependencies": {
-    "@substrate-system/web-component": "^0.0.51"
-  }
+  "license": "SEE LICENSE IN LICENSE"
 }

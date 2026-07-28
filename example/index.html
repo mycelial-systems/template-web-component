@@ -1,9 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="reduce-fouce">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Example</title>
+
+    <!--
+      Page level FOUCE guard. Inline, not linked, because it has to
+      apply before the first paint. See docs/adr/ADR-006-fouce-mitigation.md
+    -->
+    <style>
+        html.reduce-fouce { opacity: 0; }
+    </style>
+
+    <!-- Without JS the components never define, so reveal the page. -->
+    <noscript>
+        <style>
+            html.reduce-fouce { opacity: 1 !important; }
+        </style>
+    </noscript>
 </head>
 <body>
     <{{component-name}}></{{component-name}}>

@@ -30,11 +30,7 @@ __The CLI prompts for several variables__
 
 2. Edit the source code in `src/index.ts`.
 
-3. Delete either `.github/workflows/gh-pages-docs.yml` or
-   `.github/workflows/gh-pages.yml`, depending on whether you want to deploy an
-   example or docs to github pages.
-
-4. __Edit things__
+3. __Edit things__
     * edit the [build-example](https://github.com/nichoth/template-web-component/blob/c580636f1c912fe2633f7c2478f28b11729c9b80/package.json#L20)
       command in `package.json` so that it has the right path for github pages
 
@@ -51,30 +47,85 @@ __The CLI prompts for several variables__
   changelog
 * `postversion` npm hook -- `git push --follow-tags && npm publish`
 * eslint -- `npm run lint`
-* tests run in a browser environment via `tape-run` -- see
-  [`npm test`](./package.json#L12). Includes `tap` testing
-  tools -- [tapzero](https://github.com/bicycle-codes/tapzero)
-  and [tap-spec](https://www.npmjs.com/package/tap-spec)
+* tests run in a real browser via
+  [tapout](https://github.com/substrate-system/tapout) -- see
+  [`npm test`](./package.json#L12). Assertions come from
+  [tapzero](https://github.com/bicycle-codes/tapzero). The test bundle
+  needs `--bundle`, or bare module specifiers will not resolve in the
+  browser.
 * CI via github actions
 * [stylelint](https://stylelint.io/) -- see
   [preversion npm hook](https://github.com/nichoth/template-web-component/blob/main/package.json#L25)
 
 ## the component
 
-See
-*[Web Component lifecycle methods](https://gomakethings.com/the-web-component-lifecycle-methods/)*.
+The component extends
+[`@substrate-system/web-component`](https://github.com/substrate-system/web-component),
+which supplies namespaced events, `qs`/`qsa`, and attribute reflection.
+The conventions are recorded as
+[architecture decision records](./docs/adr/INDEX.md); the vocabulary is
+in [the glossary](./docs/GLOSSARY.md).
 
-### [attributeChangedCallback](https://gomakethings.com/how-to-detect-when-attributes-change-on-a-web-component/#the-attributechangedcallback-method)
+### attributes
 
-> runs whenever an attribute on the Web Component is added, removed,
-> or changes in value.
+Declare attributes with the static arrays. The base class generates the
+getters and setters and derives `observedAttributes` from them, so there
+is no `static observedAttributes` to maintain:
 
-> For performance reasons, the attributeChangedCallback() method only watches
-> and reacts to attributes you tell it to. To do that, you create a
-> `static` `observedAttributes` property, with an array of attributes to
-> watch as its value.
+```ts
+static reflectedStringAttributes = ['example']
+static reflectedBooleanAttributes = ['disabled']
 
-> You can use any attributes you’d like, including non-standard ones.
+declare example:string|null
+declare disabled:boolean
+```
 
+React to a change in a `handleChange_<attribute>` method.
+`attributeChangedCallback` routes to it by name. Dispatch is by
+convention, so adding an attribute means declaring it *and* adding the
+method -- a missing handler is skipped silently.
+See [ADR-004](./docs/adr/ADR-004-attributes-as-state.md).
 
-### [disconnectedCallback](https://gomakethings.com/the-web-component-lifecycle-methods/#the-connectedcallback-and-disconnectedcallback-methods)
+### events
+
+Emit namespaced events with `emit`, listen with `on`, and build the
+event name with the static `event()` helper:
+
+```ts
+el.emit('hello', { detail: 'some data' })   // 'cool-example:hello'
+el.on('hello', ev => { /* ... */ })
+el.addEventListener(Example.event('hello'), ev => { /* ... */ })
+```
+
+See [ADR-005](./docs/adr/ADR-005-namespaced-events.md).
+
+### rendering
+
+`render()` is abstract, so every component implements it. The base
+`connectedCallback()` calls it; if you override `connectedCallback`,
+call `super.connectedCallback()` or nothing renders.
+
+Attribute changes do *not* re-render. Update the DOM in place from the
+`handleChange_*` method instead.
+
+### FOUCE
+
+A custom element is inert markup until its JS defines it, which shows up
+as a flash of undefined custom element. This template handles it in two
+layers, described in
+[ADR-006](./docs/adr/ADR-006-fouce-mitigation.md).
+
+`src/index.css` hides the element until it is defined. This ships with
+the component:
+
+```css
+cool-example:not(:defined) {
+    display: none;
+}
+```
+
+`example/` demonstrates the page-level pattern: a `reduce-fouce` class
+on `<html>`, removed once `customElements.whenDefined` resolves for
+every component on the page. Two safeguards are required, not optional
+-- a `Promise.race` timeout, and a `<noscript>` override. Without them,
+a component that never defines leaves the page permanently blank.
